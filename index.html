@@ -710,6 +710,8 @@ background:#fff;
 color:#40516a;
 border:1px solid #cdd7e6}
 
+.seat.blocked-seat { background: #e8e9ec !important; border: 2px dashed #8c929c !important; color: #5a606a !important; }
+.seat.blocked-seat .name { font-weight: 700; letter-spacing: .04em; }
 </style>
  </head>
  <body>
@@ -717,7 +719,7 @@ border:1px solid #cdd7e6}
    <header>
     <div>
      <h1>
-      🎓 Smart Seating Chart V20
+      🎓 Smart Seating Chart V20.5
      </h1>
      <small>
       Teacher workspace · flexible classrooms
@@ -970,8 +972,8 @@ Cindy"></textarea>
   </div>
   <script>
 // Classroom defaults and seat identifiers.
-const templateTables = () => [{ id: 't1', name: 'Table 1', x: 81, y: 68, count: 2 }, { id: 't2', name: 'Table 2', x: 81, y: 42, count: 2 }, { id: 't3', name: 'Table 3', x: 27, y: 68, count: 3 }, { id: 't4', name: 'Table 4', x: 27, y: 42, count: 3 }, { id: 't5', name: 'Table 5', x: 32, y: 17, count: 4 }];
-const emptyClass = () => ({ names: [], rules: [], tables: [], seats: {}, previous: {}, locks: {}, fixtures: { screen: { x: 32, y: 90 }, desk: { x: 80, y: 81 } } });
+const templateTables = () => [{ id: 't1', name: 'Table 1', x: 19, y: 32, count: 2 }, { id: 't2', name: 'Table 2', x: 19, y: 58, count: 2 }, { id: 't3', name: 'Table 3', x: 73, y: 32, count: 3 }, { id: 't4', name: 'Table 4', x: 73, y: 58, count: 3 }, { id: 't5', name: 'Table 5', x: 68, y: 83, count: 4 }];
+const emptyClass = () => ({ names: [], rules: [], tables: [], seats: {}, previous: {}, locks: {}, blockedSeats: [], fixtures: { screen: { x: 32, y: 10 }, desk: { x: 80, y: 19 } } });
 const defaults = () => ({ active: 'Class 1', classes: { 'Class 1': emptyClass() }, avoidRepeat: true, lastView: 'teacher' });
 
 const seatIds = c => c.tables.flatMap(t => Array.from({ length: t.count }, (_, i) => t.id + ':' + i));
@@ -999,11 +1001,11 @@ function normalize(obj) { if (!obj || !obj.classes || typeof obj.classes !== 'ob
             c.seats = {};
         if (!c.previous || Array.isArray(c.previous))
             c.previous = {};
-        if (!c.locks || typeof c.locks !== 'object' || Array.isArray(c.locks))
+        if (!Array.isArray(c.blockedSeats)) c.blockedSeats = []; c.blockedSeats = [...new Set(c.blockedSeats.filter(id => typeof id === 'string'))]; if (!c.locks || typeof c.locks !== 'object' || Array.isArray(c.locks))
             c.locks = {};
         if (!c.fixtures || typeof c.fixtures !== 'object')
             c.fixtures = {};
-        for (const [k, xy] of Object.entries({ screen: { x: 32, y: 90 }, desk: { x: 80, y: 81 } })) {
+        for (const [k, xy] of Object.entries({ screen: { x: 32, y: 10 }, desk: { x: 80, y: 19 } })) {
             let f = c.fixtures[k];
             if (!f || !Number.isFinite(+f.x) || !Number.isFinite(+f.y))
                 c.fixtures[k] = { ...xy };
@@ -1058,8 +1060,8 @@ function saveState(state) {
         for (let id of Object.keys(arr))
             if (arr[id] && arr[id] === c.previous[id])
                 score -= 2; return score; }
-    function generate(c, avoidRepeat) { let allSeatIds = seatIds(c), locks = Object.entries(c.locks).filter(([id, n]) => allSeatIds.includes(id) && c.names.includes(n)), fixedNames = new Set(locks.map(([id, n]) => n)); if (fixedNames.size !== locks.length)
-        return null; let remainingSeats = allSeatIds.filter(id => !c.locks[id]), remainingNames = c.names.filter(n => !fixedNames.has(n)); if (remainingNames.length > remainingSeats.length)
+    function generate(c, avoidRepeat) { let allSeatIds = seatIds(c), blocked = new Set(c.blockedSeats || []), locks = Object.entries(c.locks).filter(([id, n]) => allSeatIds.includes(id) && !blocked.has(id) && c.names.includes(n)), fixedNames = new Set(locks.map(([id, n]) => n)); if (fixedNames.size !== locks.length)
+        return null; let remainingSeats = allSeatIds.filter(id => !c.locks[id] && !blocked.has(id)), remainingNames = c.names.filter(n => !fixedNames.has(n)); if (remainingNames.length > remainingSeats.length)
         return null; let best = null, bestScore = -Infinity; let n = Math.min(22000, Math.max(5500, allSeatIds.length * 700)); for (let i = 0; i < n; i++) {
         let shuffled = permute(remainingSeats), names = permute(remainingNames), arr = Object.fromEntries(locks);
         names.forEach((name, j) => arr[shuffled[j]] = name);
@@ -1076,8 +1078,8 @@ function saveState(state) {
 
 // Official template defaults. Developer edits are stored separately in localStorage.
 
-const builtIn12 = { id: 'classroom-12', name: 'Classroom 12', version: 1, tables: templateTables(), fixtures: { screen: { x: 32, y: 90 }, desk: { x: 80, y: 81 } } };
-const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, version: 1, tables: [], fixtures: { screen: { x: 32, y: 90 }, desk: { x: 80, y: 81 } } });
+const builtIn12 = { id: 'classroom-12', name: 'Cupertino Classroom 12', version: 5, tables: templateTables(), fixtures: { screen: { x: 68, y: 10 }, desk: { x: 20, y: 10 } } };
+const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, version: 1, tables: [], fixtures: { screen: { x: 32, y: 10 }, desk: { x: 80, y: 19 } } });
 
 
 // Smart Seating Chart V18 — readable, modular JavaScript
@@ -1095,7 +1097,67 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
     const $ = id => document.getElementById(id);
     const clean = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     let state = loadState();
-    const current = () => state.classes[state.active], capacity = c => ids(c).length;
+    // Upgrade only untouched Classroom 12 layouts from earlier preview versions.
+    // Both axes are mirrored: student-facing perspective, teacher desk at top.
+    // Keep seat IDs, assigned names, locks, and empty-seat settings unchanged.
+    const perspectiveMigrationKey = 'smart-seating-classroom12-both-axes-v1';
+    const originalPositions = { t1: [81, 68], t2: [81, 42], t3: [27, 68], t4: [27, 42], t5: [32, 17] };
+    function upgradeClassroom12(layout) {
+        if (!layout || !Array.isArray(layout.tables) || layout.tables.length !== 5) return false;
+        const matches = (flipX, flipY) => layout.tables.every(t => {
+            const p = originalPositions[t.id];
+            return p && Math.abs(t.x - (flipX ? 100 - p[0] : p[0])) < 0.01
+                && Math.abs(t.y - (flipY ? 100 - p[1] : p[1])) < 0.01;
+        });
+        // Already in the correct student perspective.
+        if (matches(true, true)) return false;
+        const original = matches(false, false);
+        const horizontal = matches(true, false);
+        const vertical = matches(false, true);
+        if (!original && !horizontal && !vertical) return false;
+        layout.tables.forEach(t => {
+            const p = originalPositions[t.id];
+            t.x = 100 - p[0];
+            t.y = 100 - p[1];
+        });
+        if (layout.fixtures) {
+            layout.fixtures.screen = { x: 68, y: 10 };
+            layout.fixtures.desk = { x: 20, y: 10 };
+        }
+        return true;
+    }
+    if (localStorage.getItem(perspectiveMigrationKey) !== 'done') {
+        let upgraded = false;
+        for (const c of Object.values(state.classes)) {
+            if (upgradeClassroom12(c)) upgraded = true;
+        }
+        if (upgraded) saveState(state);
+        localStorage.setItem(perspectiveMigrationKey, 'done');
+    }
+    // Align the teacher desk with the screen in existing untouched Classroom 12 layouts.
+    // Do not override a desk that the teacher has manually repositioned.
+    const deskAlignmentKey = 'smart-seating-classroom12-desk-aligned-v1';
+    if (localStorage.getItem(deskAlignmentKey) !== 'done') {
+        let updated = false;
+        for (const classroom of Object.values(state.classes)) {
+            const fixtures = classroom.fixtures;
+            if (!fixtures || !fixtures.screen || !fixtures.desk) continue;
+            const matchesClassroom12 = Array.isArray(classroom.tables)
+                && classroom.tables.length === 5
+                && classroom.tables.every(table => Object.prototype.hasOwnProperty.call(originalPositions, table.id));
+            if (matchesClassroom12
+                && Math.abs(fixtures.screen.x - 68) < 0.01
+                && Math.abs(fixtures.screen.y - 10) < 0.01
+                && Math.abs(fixtures.desk.x - 20) < 0.01
+                && Math.abs(fixtures.desk.y - 19) < 0.01) {
+                fixtures.desk.y = 10;
+                updated = true;
+            }
+        }
+        if (updated) saveState(state);
+        localStorage.setItem(deskAlignmentKey, 'done');
+    }
+    const current = () => state.classes[state.active], capacity = c => ids(c).filter(id => !(c.blockedSeats || []).includes(id)).length;
     let view = new URLSearchParams(location.search).get('view');
     view = view === 'display' ? 'display' : view === 'teacher' ? 'teacher' : state.lastView;
     let selected = null, selectedSeat = null, spinning = false;
@@ -1108,13 +1170,13 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
     } draw(); }
     function roomHTML(c, arr, editing) { let parts = []; for (const t of c.tables) {
         let width = Math.min(68, Math.max(13, t.count * 10.2));
-        parts.push(`<div class="table-block ${editing ? 'editable' : ''} ${selected === t.id && editing ? 'selected' : ''}" data-table="${clean(t.id)}" style="left:${t.x}%;top:${t.y}%;width:${width}%;height:12%;grid-template-columns:repeat(${t.count},minmax(0,1fr))">${editing ? `<span class="table-label">${clean(t.name)}</span><button type="button" class="table-delete" data-delete="${clean(t.id)}" title="Delete table" aria-label="Delete table">×</button>` : ''}${Array.from({ length: t.count }, (_, i) => { let id = t.id + ':' + i, n = arr[id] || '', locked = c.locks[id]; return `<div class="seat ${n ? '' : 'empty'} ${locked ? 'locked' : ''}" ${editing ? `data-seat="${clean(id)}" title="Click to assign a fixed student"` : ''}><span class="num">${i + 1}</span><span class="name">${clean(n || '—')}</span>${locked && editing ? '<span class="lockmark">🔒</span>' : ''}</div>`; }).join('')}</div>`);
+        parts.push(`<div class="table-block ${editing ? 'editable' : ''} ${selected === t.id && editing ? 'selected' : ''}" data-table="${clean(t.id)}" style="left:${t.x}%;top:${t.y}%;width:${width}%;height:12%;grid-template-columns:repeat(${t.count},minmax(0,1fr))">${editing ? `<span class="table-label">${clean(t.name)}</span><button type="button" class="table-delete" data-delete="${clean(t.id)}" title="Delete table" aria-label="Delete table">×</button>` : ''}${Array.from({ length: t.count }, (_, i) => { let id = t.id + ':' + i, blocked = (c.blockedSeats || []).includes(id), n = blocked ? '' : (arr[id] || ''), locked = c.locks[id]; return `<div class="seat ${n ? '' : 'empty'} ${locked && editing ? 'locked' : ''} ${blocked && editing ? 'blocked-seat' : ''}" ${editing ? `data-seat="${clean(id)}" title="Click to assign a fixed student"` : ''}><span class="num">${i + 1}</span><span class="name">${clean(blocked && editing ? 'EMPTY' : (n || '—'))}</span>${blocked && editing ? '<span class="lockmark">🚫</span>' : (locked && editing ? '<span class="lockmark">🔒</span>' : '')}</div>`; }).join('')}</div>`);
     } for (const [key, cls, label] of [['desk', 'teacherdesk', 'Teacher Desk'], ['screen', 'screen', 'SCREEN']]) {
         const f = c.fixtures[key];
         parts.push(`<div class="${cls} fixture ${editing ? 'editable' : ''}" ${editing ? `data-fixture="${key}" title="Drag to move"` : ''} style="left:${f.x}%;top:${f.y}%;right:auto;bottom:auto;transform:translate(-50%,-50%)">${label}</div>`);
     } return parts.join(''); }
     function draw() { const c = current(); if (!c)
-        return; $('adminRoom').classList.add('editing'); $('adminRoom').innerHTML = roomHTML(c, c.seats, true); $('displayRoom').innerHTML = roomHTML(c, c.seats, false); $('boardTitle').textContent = state.active + ' Seating Chart'; $('displayTitle').textContent = state.active + ' · Today’s Seating Chart'; $('boardInfo').textContent = capacity(c) + ' seats · ' + c.tables.length + ' tables · front at bottom'; bindDrag(); renderSelectedEditor(); renderSeatPicker(); }
+        return; $('adminRoom').classList.add('editing'); $('adminRoom').innerHTML = roomHTML(c, c.seats, true); $('displayRoom').innerHTML = roomHTML(c, c.seats, false); $('boardTitle').textContent = state.active + ' Seating Chart'; $('displayTitle').textContent = state.active + ' · Today’s Seating Chart'; $('boardInfo').textContent = capacity(c) + ' seats · ' + c.tables.length + ' tables · front at top'; bindDrag(); renderSelectedEditor(); renderSeatPicker(); }
     function renderRules() {
         const c = current(), list = $('ruleList');
         if (!c.rules.length) {
@@ -1150,24 +1212,70 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
         return;
     } box.classList.remove('hidden'); box.innerHTML = `<strong>Selected table</strong><label>Name<input id="selectedName" value="${clean(t.name)}" maxlength="40"></label><label>Seats<input id="selectedCount" type="number" min="1" max="12" value="${t.count}"></label><button id="updateSelected">Save changes</button><button class="danger" id="deleteSelected">Delete table</button><button class="secondary" id="deselectTable">Done</button>`; $('updateSelected').onclick = () => { const n = Number($('selectedCount').value); if (!Number.isInteger(n) || n < 1 || n > 12)
         return alert('Choose 1–12 seats.'); t.count = n; t.name = $('selectedName').value.trim().slice(0, 40) || t.name; cleanup(c); persist(); renderAdmin(); }; $('deleteSelected').onclick = () => deleteTable(t.id); $('deselectTable').onclick = () => { selected = null; draw(); }; }
-    function renderSeatPicker() { const c = current(), box = $('seatPicker'); if (!selectedSeat || !ids(c).includes(selectedSeat)) {
-        selectedSeat = null;
-        box.classList.add('hidden');
-        box.innerHTML = '';
-        return;
-    } let t = c.tables.find(t => selectedSeat.startsWith(t.id + ':')); let index = Number(selectedSeat.split(':').pop()) + 1; box.classList.remove('hidden'); box.innerHTML = `<strong>📌 Fixed seat · ${clean(t.name)} · Seat ${index}</strong><label>Assign student<select id="fixedStudent"><option value="">No fixed student</option>${c.names.map(n => `<option value="${clean(n)}" ${c.locks[selectedSeat] === n ? 'selected' : ''}>${clean(n)}</option>`).join('')}</select></label><button id="saveFixed">Save fixed seat</button><button class="secondary" id="removeFixed">Remove lock</button><button class="secondary" id="closeFixed">Done</button>`; $('saveFixed').onclick = () => { let n = $('fixedStudent').value; if (n) {
-        for (let [id, name] of Object.entries(c.locks))
-            if (name === n)
-                delete c.locks[id];
-        c.locks[selectedSeat] = n;
-        for (let [id, name] of Object.entries(c.seats))
-            if (name === n && id !== selectedSeat)
-                delete c.seats[id];
-        c.seats[selectedSeat] = n;
+    function renderSeatPicker() {
+        const c = current();
+        const box = $('seatPicker');
+        if (!selectedSeat || !ids(c).includes(selectedSeat)) {
+            selectedSeat = null;
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
+
+        const seatId = selectedSeat;
+        const table = c.tables.find(t => seatId.startsWith(t.id + ':'));
+        const seatNumber = Number(seatId.split(':').pop()) + 1;
+        const blocked = (c.blockedSeats || []).includes(seatId);
+        const fixedStudent = c.locks[seatId] || '';
+        const options = [
+            '<option value="">No Fixed Student (Random)</option>',
+            '<option value="__KEEP_EMPTY__">Set Empty</option>',
+            ...c.names.map((name, index) => `<option value="student:${index}">${clean(name)}</option>`)
+        ];
+
+        box.classList.remove('hidden');
+        box.innerHTML = `<strong>Fixed Seat · ${clean(table.name)} · Seat ${seatNumber}</strong>
+            <label>Student
+                <select id="seatAssignment">${options.join('')}</select>
+            </label>
+            <button class="secondary" id="closeFixed">Done</button>`;
+
+        const dropdown = $('seatAssignment');
+        const fixedIndex = c.names.indexOf(fixedStudent);
+        dropdown.value = blocked ? '__KEEP_EMPTY__' : (fixedIndex >= 0 ? `student:${fixedIndex}` : '');
+
+        dropdown.addEventListener('change', () => {
+            const choice = dropdown.value;
+            c.blockedSeats = (c.blockedSeats || []).filter(id => id !== seatId);
+            delete c.locks[seatId];
+            delete c.seats[seatId];
+
+            if (choice === '__KEEP_EMPTY__') {
+                c.blockedSeats.push(seatId);
+            } else if (choice.startsWith('student:')) {
+                const studentIndex = Number(choice.slice('student:'.length));
+                const student = c.names[studentIndex];
+                if (student) {
+                    for (const [id, name] of Object.entries(c.locks)) {
+                        if (name === student) delete c.locks[id];
+                    }
+                    for (const [id, name] of Object.entries(c.seats)) {
+                        if (name === student) delete c.seats[id];
+                    }
+                    c.locks[seatId] = student;
+                    c.seats[seatId] = student;
+                }
+            }
+            persist();
+            draw();
+            $('count').textContent = c.names.length + ' students / ' + capacity(c) + ' seats';
+        });
+        $('closeFixed').onclick = () => {
+            selectedSeat = null;
+            renderSeatPicker();
+        };
     }
-    else
-        delete c.locks[selectedSeat]; persist(); draw(); }; $('removeFixed').onclick = () => { delete c.locks[selectedSeat]; persist(); draw(); }; $('closeFixed').onclick = () => { selectedSeat = null; renderSeatPicker(); }; }
-    function cleanup(c) { let valid = new Set(ids(c)); for (let key of Object.keys(c.locks))
+    function cleanup(c) { let valid = new Set(ids(c)); c.blockedSeats = (c.blockedSeats || []).filter(id => valid.has(id)); for (let key of Object.keys(c.locks))
         if (!valid.has(key))
             delete c.locks[key]; for (let key of Object.keys(c.seats))
         if (!valid.has(key))
@@ -1216,12 +1324,16 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
     } let result = generate(c, state.avoidRepeat); if (!result) {
         alert('No valid seating arrangement found. Try adding tables or relaxing mandatory rules.');
         return;
-    } spinning = true; $('shuffleAdmin').disabled = $('shuffleDisplay').disabled = true; let rounds = 0; let interval = setInterval(() => { let names = permute(c.names), seatIds = permute(ids(c)), temp = {}; names.forEach((name, i) => temp[seatIds[i]] = name); for (const [id, n] of Object.entries(c.locks)) {
-        for (const k of Object.keys(temp))
-            if (temp[k] === n)
-                delete temp[k];
-        temp[id] = n;
-    } $('adminRoom').innerHTML = roomHTML(c, temp, false); $('displayRoom').innerHTML = roomHTML(c, temp, false); if (++rounds >= 16) {
+    } spinning = true; $('shuffleAdmin').disabled = $('shuffleDisplay').disabled = true; let rounds = 0; let interval = setInterval(() => {
+        // Preview every student moving, including students assigned to fixed seats.
+        // Locks apply only to the final arrangement, not the animation frames.
+        const names = permute(c.names);
+        const availableSeats = permute(ids(c).filter(id => !(c.blockedSeats || []).includes(id)));
+        const temp = {};
+        names.forEach((name, i) => {
+            temp[availableSeats[i]] = name;
+        });
+        $('adminRoom').innerHTML = roomHTML(c, temp, false); $('displayRoom').innerHTML = roomHTML(c, temp, false); if (++rounds >= 16) {
         clearInterval(interval);
         c.previous = { ...c.seats };
         c.seats = result;
@@ -1328,6 +1440,18 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
     catch {
         templates = Array.from({ length: 12 }, (_, i) => i === 11 ? builtIn12 : blankTemplate(i + 1));
     }
+    // Rename the official template without changing its stable ID or layout.
+    // This also updates previously saved template lists in localStorage.
+    const renamedClassroom12 = templates.find(t => t.id === 'classroom-12');
+    if (renamedClassroom12 && renamedClassroom12.name === 'Classroom 12') {
+        renamedClassroom12.name = 'Cupertino Classroom 12';
+        try { localStorage.setItem(TEMPLATE_STORE, JSON.stringify(templates)); } catch (_) {}
+    }
+    const storedClassroom12 = templates.find(t => t.id === 'classroom-12');
+    if (storedClassroom12 && upgradeClassroom12(storedClassroom12)) {
+        storedClassroom12.version = 4;
+        try { localStorage.setItem(TEMPLATE_STORE, JSON.stringify(templates)); } catch (_) {}
+    }
     function saveTemplates() { try {
         localStorage.setItem(TEMPLATE_STORE, JSON.stringify(templates));
     }
@@ -1346,7 +1470,7 @@ const blankTemplate = i => ({ id: 'classroom-' + i, name: 'Classroom ' + i, vers
     }
     function applyTemplate(id) { const t = templates.find(t => t.id === id); if (!t || !t.tables.length)
         return; const c = current(); if ((c.tables.length || Object.keys(c.locks).length || Object.values(c.seats).some(Boolean)) && !confirm('Replace the current classroom layout with ' + t.name + '? Existing seat assignments and fixed seats will be cleared. Student names and rules will be kept.'))
-        return; c.tables = t.tables.map(x => ({ ...x })); c.fixtures = { screen: { ...t.fixtures.screen }, desk: { ...t.fixtures.desk } }; c.seats = {}; c.previous = {}; c.locks = {}; selected = null; selectedSeat = null; $('templatePicker').classList.add('hidden'); persist(); renderAdmin(); $('adminStatus').textContent = t.name + ' applied.'; }
+        return; c.tables = t.tables.map(x => ({ ...x })); c.fixtures = { screen: { ...t.fixtures.screen }, desk: { ...t.fixtures.desk } }; c.seats = {}; c.previous = {}; c.locks = {}; c.blockedSeats = []; selected = null; selectedSeat = null; $('templatePicker').classList.add('hidden'); persist(); renderAdmin(); $('adminStatus').textContent = t.name + ' applied.'; }
     // Developer tools are hidden for everyday classroom use. Open with ?developer=1 to reveal the toggle.
     if (new URLSearchParams(window.location.search).get('developer') === '1') {
         $('developerToggle').classList.remove('hidden');
